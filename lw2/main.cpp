@@ -101,15 +101,13 @@ std::vector<std::pair<int, int>> SplitForRects(int w, int threadCount, int radiu
 
 	int x = radius;
 
-	for (int i = 0; i < threadCount && x + lineW < w; x += lineW)
+	for (int i = 0; i < threadCount; i++)
 	{
 		bounds.emplace_back(x, x + lineW);
 	}
 
-	if (bounds.size() < threadCount)
-	{
-		bounds.emplace_back(x, w);
-	}
+	auto [left, _] = bounds.back();
+	bounds.back() = { left, w - radius};
 
 	return bounds;
 };
