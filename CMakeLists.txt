@@ -7,3 +7,4 @@ set(ROOT_PROJECT_NAME "parallel-programming")
 project(${ROOT_PROJECT_NAME})
 
 add_subdirectory(lw1)
+add_subdirectory(lw2)
