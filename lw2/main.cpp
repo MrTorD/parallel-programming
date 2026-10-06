@@ -104,10 +104,11 @@ std::vector<std::pair<int, int>> SplitForRects(int w, int threadCount, int radiu
 	for (int i = 0; i < threadCount; i++)
 	{
 		bounds.emplace_back(x, x + lineW);
+		x += lineW;
 	}
 
 	auto [left, _] = bounds.back();
-	bounds.back() = { left, w - radius};
+	bounds.back() = { left, w - radius };
 
 	return bounds;
 };
@@ -150,5 +151,5 @@ int main(int argc, char* argv[])
 	auto duration = duration_cast<milliseconds>(finish - start).count();
 
 	dst.write(outputSrc.c_str());
-	std::cout << std::format("{} {} {} {}", threadCount, blurRadius, duration, std::thread::hardware_concurrency());
+	std::cout << std::format("{} {} {} {}\n", threadCount, blurRadius, duration, std::thread::hardware_concurrency());
 }
