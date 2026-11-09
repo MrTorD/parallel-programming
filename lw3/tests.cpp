@@ -317,7 +317,7 @@ TEST(EconomyMember, SetAccountId)
 TEST(City, InitCity)
 {
 	Money cashPerPerson = 50;
-	City city(MEMBERS_DATA, MEMBERS_KEYS_WITHOUT_ACCOUNT, cashPerPerson);
+	City city(MEMBERS_DATA, MEMBERS_KEYS_WITHOUT_ACCOUNT, cashPerPerson, true);
 
 	auto totalCash = city.CountCash();
 	ASSERT_EQ(cashPerPerson * MEMBERS_DATA.size(), totalCash);

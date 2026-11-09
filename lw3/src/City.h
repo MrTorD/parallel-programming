@@ -19,7 +19,7 @@ private:
 	void OpenAccounts(const std::set<MemberKey>& excludedMembers);
     std::ostream& PrintMemberMoney(std::ostream& output, const EconomyMember& member);
 
-	static void DoAction(MemberKey key, EconomyMember& member, std::ostream& output);
+	void DoAction(MemberKey key, EconomyMember& member, std::ostream& output);
     std::ostream& SimulateMove(std::ostream& output);
 
 	bool m_isParallel;

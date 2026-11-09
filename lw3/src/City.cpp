@@ -1,9 +1,9 @@
 #include "City.h"
 #include "EconomyErrors.h"
 #include "MembersData.h"
-#include <thread>
-#include <iostream>
 #include <format>
+#include <iostream>
+#include <thread>
 
 City::City(const std::vector<MemberData>& MembersData, const std::set<MemberKey>& membersWithoutAccount, Money cashPerPerson, bool isParallel)
 	: m_members(CreateMembers(MembersData, cashPerPerson))
@@ -57,7 +57,7 @@ std::ostream& City::SimulateMove(std::ostream& output)
 		std::vector<std::jthread> threads;
 		for (auto& [name, member] : m_members)
 		{
-			threads.emplace_back(DoAction, name, std::ref(member), std::ref(output));
+			threads.emplace_back(&City::DoAction, this, name, std::ref(member), std::ref(output));
 		}
 	}
 	else

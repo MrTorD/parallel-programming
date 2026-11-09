@@ -46,3 +46,14 @@ int StringToDaysCountStrictly(const std::string& str)
 		throw ParseInputError("Days count is overflowed. Provide valid positive integer as a day count");
 	}
 }
+
+bool ReadIsParallel(std::istream& input)
+{
+	std::string str;
+	if (!(input >> str))
+	{
+		throw std::invalid_argument("Can't read isParallel flag from input");
+	}
+
+	return str == "parallel";
+}
