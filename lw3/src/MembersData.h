@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Economy.h"
+#include <string>
 #include <set>
 
 struct MemberData

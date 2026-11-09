@@ -11,8 +11,9 @@ int main(int argc, char* argv[])
 	try
 	{
 		int days = ReadDaysCount(std::cin, argc, argv);
+		bool isParallel = ReadIsParallel(std::cin);
 
-		City city(MEMBERS_DATA, MEMBERS_KEYS_WITHOUT_ACCOUNT, CASH_PER_PERSON);
+		City city(MEMBERS_DATA, MEMBERS_KEYS_WITHOUT_ACCOUNT, CASH_PER_PERSON, isParallel );
 
 		city.StartSimulation(std::cout, days);
 		city.PrintSimulationResult(std::cout);

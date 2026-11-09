@@ -1,9 +1,7 @@
 #include "ActionsData.h"
-#include "MembersData.h"
-
 #include "EconomyErrors.h"
+#include "MembersData.h"
 #include <iostream>
-#include <stdexcept>
 
 Action HOMER_ACTION = [](MembersMap& members, Bank& bank, int) {
 	EconomyMember& homer = members.at(MemberKey::Homer);
@@ -26,7 +24,7 @@ Action HOMER_ACTION = [](MembersMap& members, Bank& bank, int) {
 		throw CitySimulationError("Homer's account doesn't exist. Check if initalization was done properly");
 	}
 
-	auto balance = bank.GetAccountBalance(id.value()); 
+	auto balance = bank.GetAccountBalance(id.value());
 
 	if (cash + balance < totalSpends)
 	{
@@ -168,9 +166,6 @@ Action APU_ACTION = [](MembersMap& members, Bank& bank, int) {
 Action BURNS_ACTION = [](MembersMap& members, Bank& bank, int) {
 	EconomyMember& burns = members.at(MemberKey::Burns);
 	EconomyMember& homer = members.at(MemberKey::Homer);
-	EconomyMember& waylon = members.at(MemberKey::Waylon);
-
-	static auto lastWaylonId = waylon.GetAccountId();
 
 	Money forHomer = 50;
 	Money forWaylon = 5;
@@ -180,9 +175,9 @@ Action BURNS_ACTION = [](MembersMap& members, Bank& bank, int) {
 	auto id = burns.GetAccountId();
 	auto homerId = homer.GetAccountId();
 
-	if (!id.has_value() || !homerId.has_value() || !lastWaylonId.has_value())
+	if (!id.has_value() || !homerId.has_value())
 	{
-		throw CitySimulationError("Burns', Homer's or Waylon's account doesn't exist. Check if initalization was done properly");
+		throw CitySimulationError("Burns' or Homer's account doesn't exist. Check if initalization was done properly");
 	}
 
 	auto cash = burns.GetCash();
@@ -203,15 +198,4 @@ Action BURNS_ACTION = [](MembersMap& members, Bank& bank, int) {
 
 	std::cout << "Burns' sending money to Homer: " << forHomer << "\n";
 	bank.SendMoney(id.value(), homerId.value(), forHomer);
-	try
-	{
-		std::cout << "Burns' trying to send money to Waylon: " << forWaylon << "\n";
-		bank.SendMoney(id.value(), lastWaylonId.value(), forWaylon);
-		std::cout << "Burn's transaction is succeed\n";
-	}
-	catch (BankOperationError)
-	{
-		std::cout << "Burns' transaction had failed. He's updating info about Waylon's id\n";
-		lastWaylonId = waylon.GetAccountId();
-	}
 };

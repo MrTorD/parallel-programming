@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <string>
 
 class EconomyMember;
 class Bank;
@@ -14,9 +13,6 @@ enum class MemberKey
 	Lisa,
 	Apu,
 	Burns,
-	Nelson,
-	Turley,
-	Waylon
 };
 
 using AccountId = unsigned long long;

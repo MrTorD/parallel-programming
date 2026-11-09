@@ -1,12 +1,14 @@
 #include "City.h"
 #include "EconomyErrors.h"
 #include "MembersData.h"
-#include <format>
+#include <thread>
 #include <iostream>
+#include <format>
 
-City::City(const std::vector<MemberData>& MembersData, const std::set<MemberKey>& membersWithoutAccount, Money cashPerPerson)
+City::City(const std::vector<MemberData>& MembersData, const std::set<MemberKey>& membersWithoutAccount, Money cashPerPerson, bool isParallel)
 	: m_members(CreateMembers(MembersData, cashPerPerson))
 	, m_bank(CountCash())
+	, m_isParallel(isParallel)
 {
 	m_startCapital = m_bank.GetCash();
 	OpenAccounts(membersWithoutAccount);
@@ -37,20 +39,35 @@ std::ostream& City::StartSimulation(std::ostream& output, int duration)
 	return output;
 }
 
+void City::DoAction(MemberKey key, EconomyMember& member, std::ostream& output)
+{
+	output << std::format("\n{} before move:\n", member.GetName());
+	PrintMemberMoney(output, member);
+
+	member.DoAction(m_members, m_bank, m_currDay);
+
+	output << std::format("{} after move:\n", member.GetName());
+	PrintMemberMoney(output, member);
+}
+
 std::ostream& City::SimulateMove(std::ostream& output)
 {
-	for (auto& [name, member] : m_members)
+	if (m_isParallel)
 	{
-		output << '\n'
-			   << member.GetName() << " before move: \n";
-		PrintMemberMoney(output, member);
-
-		member.DoAction(m_members, m_bank, m_currDay);
-
-		output << member.GetName() << " after move: \n";
-		PrintMemberMoney(output, member);
+		std::vector<std::jthread> threads;
+		for (auto& [name, member] : m_members)
+		{
+			threads.emplace_back(DoAction, name, std::ref(member), std::ref(output));
+		}
 	}
-	
+	else
+	{
+		for (auto& [name, member] : m_members)
+		{
+			DoAction(name, member, output);
+		}
+	}
+
 	return output;
 }
 
@@ -127,4 +144,3 @@ std::ostream& City::PrintMemberMoney(std::ostream& output, const EconomyMember& 
 
 	return output;
 }
-
