@@ -1,7 +1,7 @@
 #include "City.h"
 #include "EconomyErrors.h"
 #include "MembersData.h"
-
+#include <format>
 #include <iostream>
 
 City::City(const std::vector<MemberData>& MembersData, const std::set<MemberKey>& membersWithoutAccount, Money cashPerPerson)
@@ -33,6 +33,24 @@ std::ostream& City::StartSimulation(std::ostream& output, int duration)
 			throw CitySimulationError(e.what());
 		}
 	}
+
+	return output;
+}
+
+std::ostream& City::SimulateMove(std::ostream& output)
+{
+	for (auto& [name, member] : m_members)
+	{
+		output << '\n'
+			   << member.GetName() << " before move: \n";
+		PrintMemberMoney(output, member);
+
+		member.DoAction(m_members, m_bank, m_currDay);
+
+		output << member.GetName() << " after move: \n";
+		PrintMemberMoney(output, member);
+	}
+	
 	return output;
 }
 
@@ -45,9 +63,10 @@ std::ostream& City::PrintSimulationResult(std::ostream& output) const
 	output << "Total cash registered in bank: " << bankCash << "\n";
 
 	auto balancesSum = m_bank.BalancesSum();
-	output << "Balances sum: " << balancesSum << "\n";
-	output << "Total money: " << bankCash + balancesSum << "\n";
-	output << "Start capital:  " << m_startCapital << "\n";
+	output << std::format("Balances sum: {}\n", balancesSum);
+	output << std::format("Total money:: {}\n", bankCash + balancesSum);
+	output << std::format("Start capital: {}\n", m_startCapital);
+
 	return output;
 }
 
@@ -70,6 +89,7 @@ Money City::CountCash() const
 	{
 		cash += member.GetCash();
 	}
+
 	return cash;
 }
 
@@ -108,18 +128,3 @@ std::ostream& City::PrintMemberMoney(std::ostream& output, const EconomyMember& 
 	return output;
 }
 
-std::ostream& City::SimulateMove(std::ostream& output)
-{
-	for (auto& [name, member] : m_members)
-	{
-		output << '\n'
-			   << member.GetName() << " before move: \n";
-		PrintMemberMoney(output, member);
-
-		member.DoAction(m_members, m_bank, m_currDay);
-
-		output << member.GetName() << " after move: \n";
-		PrintMemberMoney(output, member);
-	}
-	return output;
-}

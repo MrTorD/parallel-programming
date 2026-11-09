@@ -1,64 +1,181 @@
 #pragma once
 
 #include "Economy.h"
+#include "EconomyErrors.h"
 #include <map>
+#include <mutex>
+#include <atomic>
 
-// Контролирует все деньги в обороте (как наличные, так и безналичные)
 class Bank
 {
 public:
-	// Инициализирует монетарную систему. cash — количество денег в наличном обороте
-	// При отрицательном количестве денег, выбрасывается BankOperationError
-	// [???Почему не std::invalid_argument???]
-	explicit Bank(Money cash);
+	explicit Bank(Money cash)
+	{
+		if (cash < 0)
+		{
+			throw std::invalid_argument("Can't initialize bank with negative cash sum");
+		}
+
+		m_cash = cash;
+		m_lastAccountId = 0;
+		m_operationsCount = 0;
+	}
 
 	Bank(const Bank&) = delete;
 	Bank& operator=(const Bank&) = delete;
 
-	// Перевести деньги с исходного счёта (srcAccountId) на целевой (dstAccountId)
-	// Нельзя перевести больше, чем есть на исходном счёте
-	// Нельзя перевести отрицательное количество денег
-	// Исключение BankOperationError выбрасывается, при отсутствии счетов или
-	// недостатке денег на исходном счёте
-	// При отрицательном количестве переводимых денег выбрасывается std::out_of_range
-	void SendMoney(AccountId srcAccountId, AccountId dstAccountId, Money amount);
+	void SendMoney(AccountId srcAccountId, AccountId dstAccountId, Money amount)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 
-	// Возвращает количество наличных денег в обороте
-	[[nodiscard]] Money GetCash() const;
+		if (amount < 0)
+		{
+			throw std::out_of_range("Can't send negative amount of money");
+		}
 
-	// Сообщает о количестве денег на указанном счёте
-	// Если указанный счёт отсутствует, выбрасывается исключение BankOperationError
-	[[nodiscard]] Money GetAccountBalance(AccountId accountId) const;
+		if (!m_accountBalances.count(srcAccountId) || !m_accountBalances.count(dstAccountId))
+		{
+			throw BankOperationError("Source or destination Account ID doesn't exist");
+		}
 
-	// Снимает деньги со счёта. Нельзя снять больше, чем есть на счете
-	// Нельзя снять отрицательное количество денег
-	// Снятые деньги переходят добавляются к массе наличных денег
-	// При невалидном номере счёта или отсутствии денег, выбрасывается исключение BankOperationError
-	// При отрицательном количестве денег выбрасывается std::out_of_range
-	Money WithdrawMoney(AccountId account, Money amount);
+		auto srcIt = m_accountBalances.find(srcAccountId);
+		auto dstIt = m_accountBalances.find(dstAccountId);
 
-	// Поместить наличные деньги на счёт. Количество денег в наличном обороте
-	// уменьшается на величину amount.
-	// Нельзя поместить больше, чем имеется денег в наличном обороте
-	// Нельзя поместить на счёт отрицательное количество денег
-	// Нельзя поместить деньги на отсутствующий счёт
-	// При невалидном номере аккаунта или нехватке наличных денег в обороте выбрасывается BankOperationError.
-	// При отрицательном количестве денег выбрасывается std::out_of_range
-	void DepositMoney(AccountId account, Money amount);
+		if (srcIt->second < amount)
+		{
+			throw BankOperationError("Can't send more money than src account has");
+		}
 
-	// Открывает счёт в банке. После открытия счёта на нём нулевой баланс.
-	// Каждый открытый счёт имеет уникальный номер.
-	// Возвращает номер счёта
-	[[nodiscard]] AccountId OpenAccount();
+		srcIt->second -= amount;
+		dstIt->second += amount;
+	}
 
-	// Закрывает указанный счёт.
-	// Возвращает количество денег, которые были на счёте в момент закрытия
-	// Эти деньги переходят в наличный оборот
-	[[nodiscard]] Money CloseAccount(AccountId accountId);
+	[[nodiscard]] Money GetCash() const
+	{
+		return m_cash;
+	}
 
-	Money BalancesSum() const;
+	[[nodiscard]] size_t GetOperationsCount() const
+	{
+		return m_operationsCount;
+	}
+
+	[[nodiscard]] Money GetAccountBalance(AccountId accountId) const
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (!m_accountBalances.count(accountId))
+		{
+			throw BankOperationError("Account with id " + std::to_string(accountId) + " doesn't exist");
+		}
+
+		return m_accountBalances.find(accountId)->second;
+	}
+
+	Money WithdrawMoney(AccountId account, Money amount)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (amount < 0)
+		{
+			throw std::out_of_range("Can't withdraw negative amount of money");
+		}
+
+		if (!m_accountBalances.count(account))
+		{
+			throw BankOperationError("Account doesn't exist");
+		}
+
+		auto balanceIt = m_accountBalances.find(account);
+		if (balanceIt->second < amount)
+		{
+			throw BankOperationError("Can't withdraw amount more than balance");
+		}
+
+		balanceIt->second -= amount;
+		m_cash += amount;
+
+		m_operationsCount++;
+
+		return amount;
+	}
+
+	void DepositMoney(AccountId account, Money amount)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (amount < 0)
+		{
+			throw std::out_of_range("Can't deposit negative amount of money");
+		}
+
+		if (m_cash < amount)
+		{
+			throw BankOperationError("Can't deposit amount more than total cash");
+		}
+
+		if (!m_accountBalances.count(account))
+		{
+			throw BankOperationError("Account doesn't exist");
+		}
+
+		auto balanceIt = m_accountBalances.find(account);
+
+		balanceIt->second += amount;
+		m_cash -= amount;
+
+		m_operationsCount++;
+	}
+
+	[[nodiscard]] AccountId OpenAccount()
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (m_lastAccountId == std::numeric_limits<AccountId>::max())
+		{
+			throw BankOperationError("Couldn't open new account. Max account amount has reached");
+		}
+
+		m_accountBalances.insert({ ++m_lastAccountId, 0 });
+
+		return m_lastAccountId;
+	}
+
+	[[nodiscard]] Money CloseAccount(AccountId accountId)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (!m_accountBalances.count(accountId))
+		{
+			throw BankOperationError("Can't close unexisting account");
+		}
+
+		auto it = m_accountBalances.find(accountId);
+		m_cash += it->second;
+
+		Money money = it->second;
+		m_accountBalances.erase(it);
+
+		return money;
+	}
+
+	Money BalancesSum() const
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		Money total = 0;
+		for (auto& [accountId, money] : m_accountBalances)
+		{
+			total += money;
+		}
+
+		return total;
+	}
+
 private:
 	std::map<AccountId, Money> m_accountBalances;
 	Money m_cash;
 	AccountId m_lastAccountId;
+	size_t m_operationsCount;
+	mutable std::mutex m_mutex;
 };

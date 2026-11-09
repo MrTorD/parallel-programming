@@ -1,8 +1,9 @@
+#include "City.h"
 #include "EconomyErrors.h"
 #include "MembersData.h"
 #include "ReadDays.h"
-#include "City.h"
 #include <gtest/gtest.h>
+#include <thread>
 
 TEST(Bank, ValidInit)
 {
@@ -352,6 +353,31 @@ TEST(ReadDaysCount, ValidDaysCount)
 	ASSERT_EQ(days, 15);
 }
 
+void DdosBank(Bank& bank, AccountId id)
+{
+	for (int i = 0; i < 100'000; i++)
+	{
+		bank.DepositMoney(id, 1);
+		bank.WithdrawMoney(id, 1);
+	}
+}
+
+TEST(A, a)
+{
+	Bank bank(2'000'000);
+	auto id = bank.OpenAccount();
+
+	{
+		std::vector<std::jthread> threads;
+		for (int i = 0; i < 8; i++)
+		{
+			threads.emplace_back(DdosBank, std::ref(bank), id);
+		}
+	}
+
+	ASSERT_EQ(bank.BalancesSum() + bank.GetCash(), 2'000'000);
+	ASSERT_EQ(bank.GetOperationsCount(), 1'600'000);
+}
 
 int main(int argc, char* argv[])
 {
